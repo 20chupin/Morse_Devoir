@@ -32,5 +32,10 @@ int main(int argc, char **argv)
     {
         cout<<"Le deuxième argument doit être E pour un encodage (français vers morse), D pour un décodage (morse vers français)"<<endl;
     }
+
+    audio test;
+
+    test.s_to_m("traduction.wav");
+
     return 0;
 }

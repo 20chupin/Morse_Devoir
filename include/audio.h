@@ -12,7 +12,8 @@ public:
 
 public:
     void m_to_s(string mrs);
-    void s_to_m();
+    void s_to_m(string file_name);
+    
 
 public:
     float ti = 0.25;
