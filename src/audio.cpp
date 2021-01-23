@@ -10,7 +10,7 @@ audio::audio(){}
     
 audio::~audio(){}
 
-namespace little_endian_io
+/*namespace little_endian_io
 {
   template <typename Word>
   std::ostream& write_word( std::ostream& outs, Word value, unsigned size = sizeof( Word ) )
@@ -20,80 +20,196 @@ namespace little_endian_io
     return outs;
   }
 }
-using namespace little_endian_io;
+using namespace little_endian_io;*/
 
 void audio::m_to_s(string mrs)
-{
-    ofstream f("traduction.wav", ios::binary ); //crée et ouvre le fichier en binaire
+{   
+    double two_pi = 6.283185307179586476925286766559;
+    const char* FileInfos = "RIFF----WAVEfmt ";
+    uint32_t BlocSize = 16;
+    uint16_t AudioFormat = 1;
+    uint16_t NbrCanaux = 1;
+    uint32_t Frequence = 44100;
+    uint32_t BytePerSec = 176400;
+    uint16_t BytePerBloc = 4;
+    uint16_t BitsPerSample = 16;
 
-    // En-tête
-    f << "RIFF----WAVEfmt ";     // La taille sera remplie après
-    write_word( f,     16, 4 );
-    write_word( f,      1, 2 );
-    write_word( f,      2, 2 );
-    write_word( f,  44100, 4 );  // fréquence d'échantillonage (Hz)
-    write_word( f, 176400, 4 );
-    write_word( f,      4, 2 );
-    write_word( f,     16, 2 );
+    const char* Data = "data----";
+
+    ofstream f;
     
-    // Repérage de la position
-    size_t pos = f.tellp();
-    f << "data----";
-
-    // Traduction du message en morse texte en audio
-
-    int N = hz * seconds;  //A CHANGER
-
-    bool son = 1;
-    float imp = ti;
-    int c = 0; // Numéro de la période d'échantillonage
-
-    for (int n = 0; mrs[n] != 0; n++)
+    f.open("traduction.wav", ofstream::binary); //crée et ouvre le fichier en binaire
+    
+    if (f.is_open())
     {
-        if (mrs[n] == '.')
+        // En-tête
+        f << FileInfos;
+        f.write(reinterpret_cast<char *>(&BlocSize), sizeof(BlocSize));
+        f.write(reinterpret_cast<char *>(&AudioFormat), sizeof(AudioFormat));
+        f.write(reinterpret_cast<char *>(&NbrCanaux), sizeof(NbrCanaux));
+        f.write(reinterpret_cast<char *>(&Frequence), sizeof(Frequence));
+        f.write(reinterpret_cast<char *>(&BytePerSec), sizeof(BytePerSec));
+        f.write(reinterpret_cast<char *>(&BytePerBloc), sizeof(BytePerBloc));
+        f.write(reinterpret_cast<char *>(&BitsPerSample), sizeof(BitsPerSample));
+        size_t data_chunk_pos = f.tellp();
+
+        f << Data;
+        
+        constexpr double amplitude = 32760;
+
+        double fe        = 44100;    // frequence d'echantillonage
+        double frequency = 440.0; // la (critère de Shannon vérifié)
+
+        int temps = 10;
+        int N = temps * Frequence;
+
+        int c = 0;
+        int son = 1;
+        float imp = ti;
+
+        for (int n = 0; mrs[n] != 0; n++)
         {
-            son = 1;
-            imp = ti;
-        }
-        else if (mrs[n] == '_')
-        {
-            son = 1;
-            imp = taah;      
-        }
-        else if (mrs[n] == '/')
-        {
-            son = 0;
-            imp = 5*ti;
+            if (mrs[n] == '.')
+            {
+                son = 1;
+                imp = ti;
+            }
+            else if (mrs[n] == '_')
+            {
+                son = 1;
+                imp = taah;      
+            }
+            else if (mrs[n] == '/')
+            {
+                son = 0;
+                imp = 5*ti;
+            }
+            else if (mrs[n] == ' ')
+            {
+                son = 0;
+                imp = ti;
+            }
+
+            for (int i = 0; i < Frequence * imp ; i++)
+            {
+                double Son = sin((two_pi * c * 440) / Frequence);
+                int SON = (int)(Son * amplitude * son);
+                f.write(reinterpret_cast<char *>(&SON), 2);
+                c++;
+            }
+            for (int i = 0; i < Frequence * ti ; i++)
+            {
+                double Son = 0;
+                int SON = (int)(Son * amplitude);
+                f.write(reinterpret_cast<char *>(&SON), 2);
+                c++;
+            }
         }
 
-        // Son correspondant à l'information
-        for (int i = 0; i < hz * imp ; i++)
-        {
-            double amplitude = (double)c / N * max_amplitude;
-            double value     = sin( (two_pi * c * frequency) / hz ) * son;
-            write_word( f, (int)(                 amplitude  * value), 2 );
-            write_word( f, (int)((max_amplitude - amplitude) * value), 2 );
-            c+=1;
-        }
+        size_t file_length = f.tellp();
 
-        // Un ti de silence (dans tous les cas)
-        for (int i = 0; i < hz * ti ; i++){
-            write_word( f, 0, 2 );
-            write_word( f, 0, 2 );
-            c+=1;
-        }
+        f.seekp(data_chunk_pos + 4);
+        uint8_t un = file_length - data_chunk_pos + 8;
+        f.write(reinterpret_cast<char *>(&un), 4 );
+
+        f.seekp(4);
+        uint8_t deux = file_length - 8;
+        f.write(reinterpret_cast<char *>(&deux), 4 ); 
+
+        f.close();
     }
+    /* double two_pi = 6.283185307179586476925286766559;
+    const char* FileInfos = "RIFF----WAVEfmt ";
+    uint32_t BlocSize = 16;
+    uint16_t AudioFormat = 1;
+    uint16_t NbrCanaux = 1;
+    uint32_t Frequence = 44100;
+    uint32_t BytePerSec = 176400;
+    uint16_t BytePerBloc = 4;
+    uint16_t BitsPerSample = 16;
+
+    const char* Data = "data----";
     
-    // Taille finale du fichier
-    size_t file_length = f.tellp();
+    f.open("traduction.wav", ofstream::binary); //crée et ouvre le fichier en binaire
+    
+    if (f.is_open())
+    {
+        // En-tête
+        f << FileInfos;
+        f.write(reinterpret_cast<char *>(&BlocSize), sizeof(BlocSize));
+        f.write(reinterpret_cast<char *>(&AudioFormat), sizeof(AudioFormat));
+        f.write(reinterpret_cast<char *>(&NbrCanaux), sizeof(NbrCanaux));
+        f.write(reinterpret_cast<char *>(&Frequence), sizeof(Frequence));
+        f.write(reinterpret_cast<char *>(&BytePerSec), sizeof(BytePerSec));
+        f.write(reinterpret_cast<char *>(&BytePerBloc), sizeof(BytePerBloc));
+        f.write(reinterpret_cast<char *>(&BitsPerSample), sizeof(BitsPerSample));
+        size_t data_chunk_pos = f.tellp();
 
-    // Ecrire la taille finale des données
-    f.seekp(pos + 4);
-    write_word(f, file_length - pos + 8 );
+        f << Data;
+        
+        constexpr double amplitude = 32760;
 
-    // Ecrire la taille totale - 8 dans l'en-tête
-    f.seekp(4);
-    write_word( f, file_length - 8, 4 );
+        double fe        = 44100;    // frequence d'echantillonage
+        double frequency = 440.0; // la (critère de Shannon vérifié)
+
+        int temps = 10;
+        int N = temps * Frequence;
+
+        int c = 0;
+        bool son = 0;
+        float imp = ti;
+
+        for (int n = 0; mrs[n] != 0; n++)
+        {
+            if (mrs[n] == '.')
+            {
+                son = 1;
+                imp = ti;
+            }
+            else if (mrs[n] == '_')
+            {
+                son = 1;
+                imp = taah;      
+            }
+            else if (mrs[n] == '/')
+            {
+                son = 0;
+                imp = 5*ti;
+            }
+            else if (mrs[n] == ' ')
+            {
+                son = 0;
+                imp = ti;
+            }
+        
+            for (int i = 0; i < 110250 ; i++)
+            {
+                double Son = sin((two_pi * c * 440) / Frequence);
+                int SON = (int)(Son * amplitude);
+                f.write(reinterpret_cast<char *>(&SON), 2);
+                c++;
+            }
+            for (int i = 0; i < 110250 ; i++)
+            {
+                double Son = 0;
+                int SON = (int)(Son * amplitude);
+                f.write(reinterpret_cast<char *>(&SON), 2);
+                c++;
+            }
+        }
+
+        size_t file_length = f.tellp();
+
+        f.seekp(data_chunk_pos + 4);
+        uint8_t un = file_length - data_chunk_pos + 8;
+        f.write(reinterpret_cast<char *>(&un), 4 );
+
+        f.seekp(4);
+        uint8_t deux = file_length - 8;
+        f.write(reinterpret_cast<char *>(&deux), 4 ); 
+
+        f.close();*/
+    
 }
 
 void audio::s_to_m(string file_name)
@@ -192,7 +308,7 @@ void audio::s_to_m(string file_name)
             if (zero < 1.1*min0 and zero > 0.9*min0){}
             else if (zero < 1.1*max0 and zero > 0.9*max0)
             {
-                morse += (string)"/";
+                morse += (string)" / ";
             }
             else
             {
@@ -200,5 +316,5 @@ void audio::s_to_m(string file_name)
             }
         }
     }
-    cout<<morse;
+    morse_texte = morse;
 }

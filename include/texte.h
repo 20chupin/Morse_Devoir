@@ -8,13 +8,11 @@ using namespace std;
 class texte
 {
 public:
-    texte();
+    texte(char M_or_F, string mrs);
     ~texte();
 
 public:
-    void morse_setter(string mrs);
     string morse_getter();
-    void francais_setter(string fr);
     string francais_getter();
 
 public:
@@ -24,6 +22,7 @@ public:
 private:
     string morse = "";
     string francais = "";
+
     map<char , string> fr_to_m = {
     {'A',"._"},
     {'B',"_..."},
@@ -66,7 +65,6 @@ private:
     {',',"__..__"},
     {'?',"..__.."}
     };
-
     map<string, char> m_to_fr = {
     {"._",'A'},
     {"_...",'B'},
