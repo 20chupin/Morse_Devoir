@@ -33,7 +33,8 @@ void texte::encode()
     morse = "";
     for (int i = 0; francais[i] != 0; i++)
     {
-        morse += fr_to_m[francais[i]];
+        string lettre = fr_to_m[francais[i]];
+        morse += lettre;
         morse += string(" ");
     }
 }
@@ -49,6 +50,8 @@ void texte::decode()
             car += morse[j];
             i = j;
         }
-        francais += m_to_fr[car];
+        char lettre[1] = {m_to_fr[car]}; // Sinon au moment de la concaténation, le programme laisse les 0 de fin de string ...
+        string lettre_s = lettre;
+        francais += lettre;
     }
 }
